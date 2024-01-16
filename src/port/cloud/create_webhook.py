@@ -7,9 +7,9 @@
 import hashlib
 import hmac
 import json
+import base64
 import requests
 from flask import Flask, request
-import base64
 
 CLIENT_ID = "EZ3X0Fu19vAEZgAJIRL9LrB8P7Erpx1J"
 CLIENT_SECRET = "5aJ1Dxs1fTp4RWxBBhG9OeAbF5PiNkAFmgQ9aTxOYf1fbPe2lvzHtRjMvJgVjuJB"
@@ -17,7 +17,7 @@ CLIENT_SECRET = "5aJ1Dxs1fTp4RWxBBhG9OeAbF5PiNkAFmgQ9aTxOYf1fbPe2lvzHtRjMvJgVjuJ
 API_URL = "https://api.getport.io/v1"
 
 app = Flask(__name__)
-port = 8000
+PORT = 8000
 
 @app.route('/', methods=['POST'])
 def handle_webhooks():
@@ -52,17 +52,17 @@ def handle_webhooks():
         run_id = request.json.get('context').get('runId')
         insert_logs_endpoint = f"{API_URL}/actions/runs/{run_id}/logs"
         update_run_endpoint = f"{API_URL}/actions/runs/{run_id}"
-
         blueprint_id = request.get_json()['context']['blueprint']
-        service_name = request.get_json()['payload']['properties']['service_name']
+        resource_name = request.get_json()['payload']['properties']['resource_name']
+
 		# CREATE entity
         create_entity_endpoint = f"{API_URL}/blueprints/{blueprint_id}/entities?create_missing_related_entities=true&run_id={run_id}"
-        create_entity_response = requests.post(
-            create_entity_endpoint, 
-            json={"identifier":service_name,"title":"Some Title","properties":{"readme":"string","url":"https://example.com","language":"string","slack":"https://example.com","tier":"Mission Critical"},"relations":{}}, 
-            headers=headers)
-            	
+        create_entity_response = requests.post(create_entity_endpoint, json={
+            "identifier":resource_name,"title":"Some Title","properties":{"readme":"string","url":"https://example.com","language":"string","slack":"https://example.com","tier":"Mission Critical"},"relations":{}
+        }, headers=headers)
         create_entity_response.raise_for_status()
+
+        # create entity
         print('Successfully created the entity')
         requests.post(insert_logs_endpoint, json={
             "message": "Successfully created the entity"
@@ -79,6 +79,8 @@ def handle_webhooks():
         requests.post(insert_logs_endpoint, json={
             "message": "Successfully updated the run status"
         }, headers=headers)
+
+		# SUCCESS entity
         requests.patch(update_run_endpoint, json={
             "status": "SUCCESS"
         }, headers=headers)
@@ -88,15 +90,16 @@ def handle_webhooks():
         requests.post(insert_logs_endpoint, json={
             "message": "Something went wrong"
         }, headers=headers)
+
+		# FAILURE entity
         requests.patch(update_run_endpoint, json={
             "status": "FAILURE"
         }, headers=headers)
+
         raise Exception('Something went wrong', str(e))
-		
 
     return 'OK'
 
 
 if __name__ == '__main__':
-    app.run(port=port)
-
+    app.run(port=PORT)
