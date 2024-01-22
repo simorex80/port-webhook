@@ -18,11 +18,18 @@ API_URL = "https://api.getport.io/v1"
 
 app = Flask(__name__)
 PORT = 8000
+TIMEOUT = 30
 
 @app.route('/', methods=['POST'])
 def handle_webhooks():
+    """Handle webhooks"""
+
     # webhook signature validation
-    message = f"{request.headers['x-port-timestamp']}.{json.dumps(request.get_json(), separators=(',', ':'))}"
+    message = f"{
+            request.headers['x-port-timestamp']
+        }.{
+            json.dumps(request.get_json(), separators=(',', ':'))
+        }"
     signed = hmac.new(CLIENT_SECRET.encode('utf-8'), digestmod=hashlib.sha256)
     signed.update(message.encode('utf-8'))
 
@@ -33,7 +40,7 @@ def handle_webhooks():
     if decoded_signed == signature:
         print('Webhook signature validated successfully')
     else:
-        raise Exception('Invalid webhook signature')
+        raise ValueError('Invalid webhook signature')
     # webhook signature validation
 
     # You can put any custom logic here
@@ -42,7 +49,7 @@ def handle_webhooks():
     access_token_response = requests.post(f"{API_URL}/auth/access_token", json={
         "clientId": CLIENT_ID,
         "clientSecret": CLIENT_SECRET
-    })
+    }, timeout=TIMEOUT)
     token = access_token_response.json().get('accessToken')
     headers = {
         "Authorization": f"Bearer {token}"
@@ -58,45 +65,61 @@ def handle_webhooks():
 		# CREATE entity
         create_entity_endpoint = f"{API_URL}/blueprints/{blueprint_id}/entities?create_missing_related_entities=true&run_id={run_id}"
         create_entity_response = requests.post(create_entity_endpoint, json={
-            "identifier":service_name,"title":"Some Title","properties":{"readme":"string","url":"https://example.com","language":"string","slack":"https://example.com","tier":"Mission Critical"},"relations":{}
-        }, headers=headers)
+            "identifier":service_name,
+            "title":"Some Title",
+            "properties":{
+                "readme":"string",
+                "url":"https://example.com",
+                "language":"string",
+                "slack":"https://example.com",
+                "tier":"Mission Critical"
+            },
+            "relations":{}
+        }, headers=headers
+        , timeout=TIMEOUT)
         create_entity_response.raise_for_status()
 
         # create entity
         print('Successfully created the entity')
         requests.post(insert_logs_endpoint, json={
             "message": "Successfully created the entity"
-        }, headers=headers)
+        }, headers=headers
+        , timeout=TIMEOUT)
 
         # create run log
         print('Successfully created run log')
         requests.post(insert_logs_endpoint, json={
             "message": "Successfully created run log"
-        }, headers=headers)
+        }, headers=headers
+        , timeout=TIMEOUT)
 
 		# update the status of the run
         print('Successfully updated the run status')
         requests.post(insert_logs_endpoint, json={
             "message": "Successfully updated the run status"
-        }, headers=headers)
+        }, headers=headers
+        , timeout=TIMEOUT)
 
 		# SUCCESS entity
         requests.patch(update_run_endpoint, json={
             "status": "SUCCESS"
-        }, headers=headers)
+        }, headers=headers
+        , timeout=TIMEOUT)
 
     except Exception as e:
         # update the status of the run to FAILURE
         requests.post(insert_logs_endpoint, json={
             "message": "Something went wrong"
-        }, headers=headers)
+        }, headers=headers
+        , timeout=TIMEOUT)
 
 		# FAILURE entity
         requests.patch(update_run_endpoint, json={
             "status": "FAILURE"
-        }, headers=headers)
+        }, headers=headers
+        , timeout=TIMEOUT)
 
-        raise Exception('Something went wrong', str(e))
+        raise SystemError('Something went wrong', str(e)) from e
 
     return 'OK'
 
