@@ -25,6 +25,9 @@ def handle(request, headers):
         create_entity_response = requests.post(create_entity_endpoint, json={
             "identifier":resource_name,
             "title":title,
+            "team": [
+                "PE"
+            ],
             "properties":{
                 "readme":"string",
                 "url":"https://example.com",

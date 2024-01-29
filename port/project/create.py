@@ -25,6 +25,9 @@ def handle(request, headers):
         create_entity_response = requests.post(create_entity_endpoint, json={
             "identifier":project_name,
             "title":title,
+            "team": [
+                "PE"
+            ],
             "properties":{
                 "project_number":project_number
             },
